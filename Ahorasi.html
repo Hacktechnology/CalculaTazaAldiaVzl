@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tasas Pro - Hacktechnology</title>
+    <style>
+        :root { 
+            --bg: #121212; --card: #1e1e1e; --text: #e0e0e0;
+            --bcv: #004a99; --binance: #f3ba2f; --success: #28a745; 
+            --neon-blue: #00d2ff; --neon-green: #39ff14;
+        }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; display: flex; justify-content: center; min-height: 100vh; align-items: center; }
+        
+        /* PANTALLA DE BLOQUEO */
+        #lock-screen { text-align: center; background: var(--card); padding: 40px 20px; border-radius: 30px; border: 1px solid #333; width: 100%; max-width: 380px; box-shadow: 0 0 20px rgba(0,0,0,0.5); position: absolute; z-index: 1000; }
+        .ht-logo { width: 70px; height: 70px; border: 2px solid var(--neon-green); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; color: var(--neon-blue); font-weight: bold; font-size: 1.5rem; }
+        
+        /* APP PRINCIPAL */
+        #app-content { display: none; background: var(--card); width: 100%; max-width: 420px; border-radius: 25px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .refresh-btn { background: rgba(40, 167, 69, 0.1); border: 1px solid var(--success); color: var(--success); padding: 8px 15px; border-radius: 20px; font-size: 0.75rem; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .price-item { padding: 12px; border-radius: 15px; text-align: center; color: white; transition: 0.3s; }
+        .full { grid-column: span 2; }
+        .price-item big { display: block; font-size: 1.6rem; font-weight: bold; }
+        
+        /* ANIMACIÓN DE PARPADEO */
+        @keyframes parpadeo {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.02); background: var(--neon-green); color: black; }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        input, select { width: 100%; padding: 14px; margin-bottom: 15px; border: 1px solid #333; border-radius: 12px; background: #2a2a2a; color: white; box-sizing: border-box; outline: none; font-size: 1rem; }
+        .res-box { border: 2px solid var(--success); padding: 15px; border-radius: 15px; text-align: center; margin-bottom: 15px; }
+        .res-val { color: var(--success); font-size: 2.2rem; font-weight: bold; display: block; }
+        
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; z-index: 2000; backdrop-filter: blur(4px); }
+        .modal-content { background: var(--card); padding: 25px; border-radius: 25px; width: 85%; max-width: 360px; border: 1px solid #333; }
+        
+        .btn-ws { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; background: #25D366; color: white; margin-top: 10px; font-size: 1rem; }
+    </style>
+</head>
+<body>
+
+<div id="lock-screen">
+    <div class="ht-logo">HT</div>
+    <h2 style="color:white; margin-bottom:5px;">Hacktechnology</h2>
+    <p style="color:var(--neon-blue); font-size:0.8rem; letter-spacing:2px; margin-bottom:30px;">SISTEMA DE DIVISAS</p>
+    
+    <input type="text" id="licenseInput" placeholder="Ingrese su Llave Pro" style="text-align:center; border-color:var(--neon-blue);">
+    <button onclick="verificarLicencia()" style="width:100%; padding:15px; background:var(--neon-green); border:none; border-radius:12px; font-weight:bold; cursor:pointer; color:black;">DESBLOQUEAR APP</button>
+    
+    <p style="margin-top:20px; font-size:0.75rem; color:#888;">ID de Soporte: <span id="supportId" style="color:var(--neon-green); font-weight:bold;"></span></p>
+</div>
+
+<div id="app-content">
+    <div class="header">
+        <h3 style="margin:0;">Vzla Tasas Pro</h3>
+        <button class="refresh-btn" onclick="cargarDatos()">🔄 Refrescar Precios</button>
+    </div>
+
+    <div class="grid">
+        <div class="price-item" id="card-usd" style="background: var(--bcv);"><small>DÓLAR BCV</small><big id="val-usd">--</big></div>
+        <div class="price-item" id="card-eur" style="background: #333;"><small>EURO BCV</small><big id="val-eur">--</big></div>
+        <div class="price-item full" id="card-bin" style="background: var(--binance); color: #222;"><small>BINANCE USDT (P2P)</small><big id="val-bin">--</big></div>
+    </div>
+
+    <div style="border-top: 1px solid #333; padding-top: 15px;">
+        <select id="modoConv" onchange="calcular()">
+            <option value="divisa">Divisas ➔ Bolívares</option>
+            <option value="bolivar">Bolívares ➔ Divisas</option>
+        </select>
+
+        <input type="number" id="montoInput" placeholder="Monto a convertir" oninput="calcular()">
+
+        <select id="tasaSelect" onchange="calcular()">
+            <option value="usd">Dólar Oficial (BCV)</option>
+            <option value="eur">Euro Oficial (BCV)</option>
+            <option value="bin">Promedio Binance</option>
+        </select>
+
+        <div class="res-box">
+            <small style="color:#888;">TOTAL A PAGAR</small>
+            <span class="res-val" id="resFinal">Bs. 0,00</span>
+        </div>
+        
+        <button class="btn-ws" onclick="abrirModal()">💬 Enviar al Cliente</button>
+    </div>
+</div>
+
+<div id="modalPago" class="modal">
+    <div class="modal-content">
+        <h4 style="margin-top:0; color:white">Datos del Pago</h4>
+        <input type="text" id="clienteNombre" placeholder="Nombre del Cliente">
+        <input type="text" id="pmBanco" placeholder="Banco">
+        <input type="text" id="pmCI" placeholder="Cédula">
+        <input type="text" id="pmTelf" placeholder="Teléfono Pago Móvil">
+        
+        <button class="btn-ws" onclick="enviarWS()">🚀 COMPARTIR POR WHATSAPP</button>
+        <button onclick="cerrarModal()" style="background:none; border:none; color:#777; width:100%; margin-top:10px; cursor:pointer;">Cancelar</button>
+    </div>
+</div>
+
+<script>
+    let tasas = { usd: 0, eur: 0, bin: 0 };
+    const MASTER_KEY = "grh869"; 
+    const SOPORTE_TELF = "+584260869376";
+
+    const myId = "HT-" + Math.floor(100 + Math.random() * 899);
+    document.getElementById('supportId').innerText = myId;
+
+    function verificarLicencia() {
+        const input = document.getElementById('licenseInput').value.trim().toUpperCase();
+        const correctKey = "HT-" + btoa(myId + MASTER_KEY).substring(0, 10).toUpperCase();
+
+        if (input === correctKey) {
+            document.getElementById('lock-screen').style.display = 'none';
+            document.getElementById('app-content').style.display = 'block';
+            cargarDatos();
+        } else {
+            alert("Llave inválida. Contacte a Hacktechnology.");
+        }
+    }
+
+    async function cargarDatos() {
+        const btn = document.querySelector('.refresh-btn');
+        const items = document.querySelectorAll('.price-item');
+        btn.innerHTML = "⏳ Actualizando...";
+        
+        try {
+            const [rUsd, rEur, rPar] = await Promise.all([
+                fetch('https://ve.dolarapi.com/v1/dolares/oficial'),
+                fetch('https://ve.dolarapi.com/v1/euros/oficial'),
+                fetch('https://ve.dolarapi.com/v1/dolares/paralelo')
+            ]);
+            tasas.usd = (await rUsd.json()).promedio;
+            tasas.eur = (await rEur.json()).promedio;
+            tasas.bin = (await rPar.json()).promedio;
+            
+            document.getElementById('val-usd').innerText = tasas.usd.toFixed(2);
+            document.getElementById('val-eur').innerText = tasas.eur.toFixed(2);
+            document.getElementById('val-bin').innerText = tasas.bin.toFixed(2);
+            
+            // EFECTO PARPADEO
+            items.forEach(item => {
+                item.style.animation = 'parpadeo 0.6s ease-in-out';
+                setTimeout(() => item.style.animation = '', 600);
+            });
+
+            calcular();
+            btn.innerHTML = "✅ ¡Precios al día!";
+            setTimeout(() => btn.innerHTML = "🔄 Refrescar Precios", 2500);
+        } catch (e) { 
+            btn.innerHTML = "❌ Error de conexión";
+        }
+    }
+
+    function calcular() {
+        const monto = parseFloat(document.getElementById('montoInput').value) || 0;
+        const tasa = tasas[document.getElementById('tasaSelect').value] || 0;
+        const modo = document.getElementById('modoConv').value;
+        const resFinal = document.getElementById('resFinal');
+        
+        if(modo === "divisa") {
+            const total = monto * tasa;
+            resFinal.innerText = "Bs. " + total.toLocaleString('es-VE', {minimumFractionDigits: 2});
+        } else {
+            const total = tasa > 0 ? monto / tasa : 0;
+            resFinal.innerText = "$ " + total.toLocaleString('en-US', {minimumFractionDigits: 2});
+        }
+    }
+
+    function abrirModal() {
+        document.getElementById('pmBanco').value = localStorage.getItem('miBanco') || "";
+        document.getElementById('pmCI').value = localStorage.getItem('miCI') || "";
+        document.getElementById('pmTelf').value = localStorage.getItem('miTelf') || SOPORTE_TELF;
+        document.getElementById('modalPago').style.display = 'flex';
+    }
+
+    function cerrarModal() { document.getElementById('modalPago').style.display = 'none'; }
+
+    function enviarWS() {
+        const cliente = document.getElementById('clienteNombre').value || "Cliente";
+        const total = document.getElementById('resFinal').innerText;
+        const banco = document.getElementById('pmBanco').value;
+        const ci = document.getElementById('pmCI').value;
+        const telf = document.getElementById('pmTelf').value;
+        const tasaTexto = document.getElementById('tasaSelect').options[document.getElementById('tasaSelect').selectedIndex].text;
+
+        localStorage.setItem('miBanco', banco);
+        localStorage.setItem('miCI', ci);
+        localStorage.setItem('miTelf', telf);
+
+        const msg = `Hola *${cliente}*, el total es *${total}*.\nCalculado a tasa *${tasaTexto}*.\n\n*Datos de Pago:*\n📌 Banco: ${banco}\n📱 Telf: ${telf}\n💳 CI: ${ci}\n\n_Soporte: ${SOPORTE_TELF}_\n*Hacktechnology Pro*`;
+        window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+        cerrarModal();
+    }
+</script>
+
+</body>
+</html>
