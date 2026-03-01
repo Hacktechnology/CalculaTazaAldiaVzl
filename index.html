@@ -8,7 +8,7 @@
         :root { 
             --bg: #121212; --card: #1e1e1e; --text: #e0e0e0;
             --bcv: #004a99; --binance: #f3ba2f; --success: #28a745; 
-            --neon-blue: #00d2ff; --neon-green: #39ff14;
+            --neon-blue: #00d2ff; --neon-green: #39ff14; --danger: #dc3545;
         }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; display: flex; justify-content: center; min-height: 100vh; align-items: center; }
         
@@ -42,6 +42,9 @@
         .modal-content { background: var(--card); padding: 25px; border-radius: 25px; width: 85%; max-width: 360px; border: 1px solid #333; }
         
         .btn-ws { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; background: #25D366; color: white; margin-top: 10px; font-size: 1rem; }
+        
+        .logout-btn { background: none; border: 1px solid #444; color: #777; padding: 5px 12px; border-radius: 10px; cursor: pointer; font-size: 0.7rem; margin-top: 15px; display: block; width: 100%; transition: 0.3s; }
+        .logout-btn:hover { border-color: var(--danger); color: var(--danger); }
     </style>
 </head>
 <body>
@@ -59,7 +62,7 @@
 
 <div id="app-content">
     <div class="header">
-        <h3 style="margin:0;">Vzla Tasas Pro</h3>
+        <h3 style="margin:0;">Venezuela Intercambio Pro</h3>
         <button class="refresh-btn" onclick="cargarDatos()">🔄 Refrescar Precios</button>
     </div>
 
@@ -89,6 +92,7 @@
         </div>
         
         <button class="btn-ws" onclick="abrirModal()">💬 Enviar al Cliente</button>
+        <button class="logout-btn" onclick="cerrarSesion()">🔒 Cerrar Sesión / Bloquear</button>
     </div>
 </div>
 
@@ -110,19 +114,41 @@
     const MASTER_KEY = "grh869"; 
     const SOPORTE_TELF = "+584260869376";
 
-    const myId = "HT-" + Math.floor(100 + Math.random() * 899);
+    // GENERAR O RECUPERAR ID ÚNICO FIJO
+    let myId = localStorage.getItem('mi_soporte_id');
+    if (!myId) {
+        myId = "HT-" + Math.floor(100 + Math.random() * 899);
+        localStorage.setItem('mi_soporte_id', myId);
+    }
     document.getElementById('supportId').innerText = myId;
+
+    // AL CARGAR LA PÁGINA: REVISAR SI YA ESTÁ ACTIVADO
+    window.onload = function() {
+        if (localStorage.getItem('app_activada') === 'true') {
+            document.getElementById('lock-screen').style.display = 'none';
+            document.getElementById('app-content').style.display = 'block';
+            cargarDatos();
+        }
+    };
 
     function verificarLicencia() {
         const input = document.getElementById('licenseInput').value.trim().toUpperCase();
         const correctKey = "HT-" + btoa(myId + MASTER_KEY).substring(0, 10).toUpperCase();
 
         if (input === correctKey) {
+            localStorage.setItem('app_activada', 'true'); // GUARDAR ACTIVACIÓN
             document.getElementById('lock-screen').style.display = 'none';
             document.getElementById('app-content').style.display = 'block';
             cargarDatos();
         } else {
             alert("Llave inválida. Contacte a Hacktechnology.");
+        }
+    }
+
+    function cerrarSesion() {
+        if(confirm("¿Seguro que quieres cerrar sesión? Se pedirá la llave nuevamente.")) {
+            localStorage.removeItem('app_activada');
+            location.reload(); // Recarga para volver al inicio
         }
     }
 
@@ -145,7 +171,6 @@
             document.getElementById('val-eur').innerText = tasas.eur.toFixed(2);
             document.getElementById('val-bin').innerText = tasas.bin.toFixed(2);
             
-            // EFECTO PARPADEO
             items.forEach(item => {
                 item.style.animation = 'parpadeo 0.6s ease-in-out';
                 setTimeout(() => item.style.animation = '', 600);
@@ -195,7 +220,7 @@
         localStorage.setItem('miCI', ci);
         localStorage.setItem('miTelf', telf);
 
-        const msg = `Hola *${cliente}*, el total es *${total}*.\nCalculado a tasa *${tasaTexto}*.\n\n*Datos de Pago:*\n📌 Banco: ${banco}\n📱 Telf: ${telf}\n💳 CI: ${ci}\n\n_Soporte: ${SOPORTE_TELF}_\n*Hacktechnology Pro*`;
+        const msg = `Hola *${cliente}*, el monto total es *${total}*.\nCalculado a tasa *${tasaTexto}*.\n\n*Datos de Pago:*\n📌 Banco: ${banco}\n📱 Telf: ${telf}\n💳 CI: ${ci}\n\n_Soporte: ${SOPORTE_TELF}_\n*Hacktechnology Pro*`;
         window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
         cerrarModal();
     }
